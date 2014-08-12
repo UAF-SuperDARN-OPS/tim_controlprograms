@@ -515,8 +515,16 @@ int main(int argc,char *argv[]) {
     fprintf(stdout,"  intsc: %d intus: %d scnsc: %d scnus: %d nowait: %d\n",intsc,intus,scnsc,scnus,al_nowait->count);
     fprintf(stdout,"  sbm: %d ebm: %d  beams: %d\n",sbm,ebm,beams);
     fprintf(stdout,"Clear Search Parameters::\n");
-    fprintf(stdout,"  clrskip arg:: count: %d value: %d\n",ai_clrskip->count,ai_clrskip->ival[0]);
-    fprintf(stdout,"  clrscan arg:: count: %d value: %d\n",ai_clrskip->count,ai_clrskip->ival[0]);
+    if (al_clrscan->count) {
+    fprintf(stdout,"  Force clrsearch at start of scan: Enabled\n");
+    } else {
+    fprintf(stdout,"  Force clrsearch at start of scan: Disabled\n");
+    }
+    if (ai_clrskip->ival[0]) {
+    fprintf(stdout,"  minimum time between clrsearch: %d sec\n",ai_clrskip->ival[0] );
+    } else {
+    fprintf(stdout,"  clrsearch at start of every integration: Enabled\n");
+    }
     if( ai_frqstepsize->ival[0] > 0  && ai_frqsteps->ival[0] > 0 ) {
       fprintf(stdout,"Frequency Stepping Enabled::\n");
     } else {
