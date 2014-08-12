@@ -57,7 +57,7 @@
 #include "site.h"
 #include "sitebuild.h"
 
-/* sorry, included for checking sanity checking pcode sequences with --test (JTK)*/
+/* included for checking sanity checking pcode sequences with --test */
 #include "tsg.h" 
 #include "maketsg.h"
 
@@ -83,12 +83,11 @@ int main(int argc,char *argv[]) {
 
   /* Variables need for interprocess communications */
   char logtxt[1024];
-  void *tmpbuf;
-  size_t tmpsze;
-/*
-  struct TCPIPMsgHost shell={"127.0.0.1",44101,-1};
-*/
+
+  /* Number of active aux tasks */
   int tnum=0; /* We aren't going to be sending any data to the aux task processes */      
+
+  /* Aux task array for normal SuperDARN */
   struct TCPIPMsgHost task[4]={
     {"127.0.0.1",1,-1}, /* iqwrite */
     {"127.0.0.1",2,-1}, /* rawacfwrite */
@@ -107,7 +106,7 @@ int main(int argc,char *argv[]) {
   int bcode11[11]={1,1,1,-1,-1,-1,1,-1,-1,1,-1};
   int bcode13[13]={1,1,1,1,1,-1,-1,1,1,-1,1,-1,1};
 
-/* Pulse sequence Table */
+/* Pulse sequence Table, we define 48 equally spaced pulses */
   int ptab[48] = {
                   0,1,2,3,4,5,6,7,8,9,
                   10,11,12,13,14,15,16,17,18,19,
@@ -140,6 +139,9 @@ int main(int argc,char *argv[]) {
   /* Variables associated with beam scanning */
   int beams=0;
   int skip;
+  /* Variables associated with frequency stepping */
+  int basefreq;
+  int fstep;
 
   /* create commandline argument structs */
   /* First lets define a help argument */
@@ -164,6 +166,9 @@ int main(int argc,char *argv[]) {
   struct arg_int  *ai_df         = arg_int0(NULL, "df", NULL,"Day time transmit frequency in KHz"); /*OptionAdd( &opt, "df", 'i', &dfrq); */
   struct arg_int  *ai_nf         = arg_int0(NULL, "nf", NULL,"Night time transmit frequency in KHz"); /*OptionAdd( &opt, "nf", 'i', &nfrq); */
   struct arg_int  *ai_fixfrq     = arg_int0(NULL, "fixfrq", NULL,"Fixes the transmit frequency of the radar to one frequency, in KHz"); /*OptionAdd( &opt, "fixfrq", 'i', &fixfrq); */
+  struct arg_int  *ai_frqstepsize = arg_int0(NULL, "frqstepsize", NULL,"Frequency step size in KHz to use"); 
+  struct arg_int  *ai_frqsteps   = arg_int0(NULL, "frqsteps", NULL,"Number of frequency steps to use. Value of 0 disables frequency stepping"); 
+  struct arg_int  *ai_scansc     = arg_int0(NULL, "scansc", NULL,"Scan boundary in seconds");
   struct arg_int  *ai_xcf        = arg_int0(NULL, "xcf", NULL,"Enable xcf, --xcf 1: for all sequences --xcf 2: for every other sequence, etc..."); /*OptionAdd( &opt, "xcf", 'i', &xcnt); */
   struct arg_int  *ai_ep         = arg_int0(NULL, "ep", NULL,"Local TCP port for errorlog process"); /*OptionAdd(&opt,"ep",'i',&errlog.port); */
   struct arg_int  *ai_sp         = arg_int0(NULL, "sp", NULL,"Local TCP port for radarshall process"); /*OptionAdd(&opt,"sp",'i',&shell.port); */
@@ -185,7 +190,7 @@ int main(int argc,char *argv[]) {
 
   /* create list of all arguement structs */
   void* argtable[] = {al_help,al_debug,al_test,al_discretion, al_fast, al_nowait, al_onesec, \
-                      ai_mppul,ai_baud, ai_tau, ai_nrang, ai_frang, ai_rsep, ai_dt, ai_nt, ai_df, ai_nf, ai_fixfrq, ai_xcf, ai_ep, ai_sp, ai_bp, ai_sb, ai_eb, ai_cnum, \
+                      ai_mppul,ai_baud, ai_tau, ai_nrang, ai_frang, ai_frqstepsize,ai_frqsteps,ai_scansc,ai_rsep, ai_dt, ai_nt, ai_df, ai_nf, ai_fixfrq, ai_xcf, ai_ep, ai_sp, ai_bp, ai_sb, ai_eb, ai_cnum, \
                       as_ros, as_ststr, as_libstr,as_verstr,ai_clrskip,al_clrscan,ai_cpid,ae_argend};
 
 /* END of variable defines */
@@ -210,7 +215,10 @@ int main(int argc,char *argv[]) {
   al_clrscan->count = 0;
   al_debug->count = 0;
   ai_bp->ival[0] = 44100;
+  ai_scansc->ival[0] = 0;
   ai_fixfrq->ival[0] = -1;
+  ai_frqstepsize->ival[0] = 0;
+  ai_frqsteps->ival[0] = 0;
   ai_mppul->ival[0] = mppul;
   ai_baud->ival[0] = nbaud;
   ai_tau->ival[0] = mpinc;
@@ -487,19 +495,31 @@ int main(int argc,char *argv[]) {
      exitpoll=1;
      SiteExit(0);
   }
+  /* Let's apply the scansc argument value if it was requested */
+  if(ai_scansc->count > 0 ) {
+    scnsc=ai_scansc->ival[0];
+    scnus=0;
+  }
 
   if(al_test->count > 0) {
         
-    fprintf(stdout,"Control Program Argument Parameters::\n");
+    fprintf(stdout,"General Control Program Parameters::\n");
     fprintf(stdout,"  xcf arg:: count: %d value: %d xcnt: %d\n",ai_xcf->count,ai_xcf->ival[0],xcnt);
-    fprintf(stdout,"  mppul arg:: count: %d value: %d mmpul: %d\n",ai_mppul->count,ai_mppul->ival[0],mppul);
-    fprintf(stdout,"  baud arg:: count: %d value: %d nbaud: %d\n",ai_baud->count,ai_baud->ival[0],nbaud);
-    fprintf(stdout,"  clrskip arg:: count: %d value: %d\n",ai_clrskip->count,ai_clrskip->ival[0]);
     fprintf(stdout,"  cpid: %d progname: \'%s\'\n",cp,progname);
     fprintf(stdout,"Scan Sequence Parameters::\n");
     fprintf(stdout,"  txpl: %d mpinc: %d nbaud: %d rsep: %d\n",txpl,mpinc,nbaud,rsep);
     fprintf(stdout,"  intsc: %d intus: %d scnsc: %d scnus: %d nowait: %d\n",intsc,intus,scnsc,scnus,al_nowait->count);
     fprintf(stdout,"  sbm: %d ebm: %d  beams: %d\n",sbm,ebm,beams);
+    fprintf(stdout,"Clear Search Parameters::\n");
+    fprintf(stdout,"  clrskip arg:: count: %d value: %d\n",ai_clrskip->count,ai_clrskip->ival[0]);
+    fprintf(stdout,"  clrscan arg:: count: %d value: %d\n",ai_clrskip->count,ai_clrskip->ival[0]);
+    if( ai_frqstepsize->ival[0] > 0  && ai_frqsteps->ival[0] > 0 ) {
+      fprintf(stdout,"Frequency Stepping Enabled::\n");
+    } else {
+      fprintf(stdout,"Frequency Stepping Disabled::\n");
+    }
+    fprintf(stdout,"  frqstepsize :: %d kHz\n",ai_frqstepsize->ival[0]);
+    fprintf(stdout,"  frqsteps :: %d\n",ai_frqsteps->ival[0]);
     
     /* TODO: ADD PARAMETER CHECKING, SEE IF PCODE IS SANE AND WHATNOT */
    if(nbaud >= 1) {
@@ -531,17 +551,15 @@ int main(int argc,char *argv[]) {
         for (i=0;i<tsgprm.mppul;i++) tsgprm.pat[i]=ptab[i];
 
         tsgbuf=TSGMake(&tsgprm,&flag);
-        fprintf(stdout,"Sequence Parameters::\n");
-        fprintf(stdout,"  lagfr: %d smsep: %d  txpl: %d samples: %d\n",tsgprm.lagfr,tsgprm.smsep,tsgprm.txpl,tsgprm.samples);
+        fprintf(stdout,"TSGMake Generated Sequence Parameters::\n");
+        fprintf(stdout,"  lagfr: %d smsep: %d  txpl: %d samples: %d mppul: %d\n",tsgprm.lagfr,tsgprm.smsep,tsgprm.txpl,tsgprm.samples,tsgprm.mppul);
     
         if(tsgprm.smsep == 0 || tsgprm.lagfr == 0) {
-            fprintf(stdout,"Sequence Parameters::\n");
-            fprintf(stdout,"  lagfr: %d smsep: %d  txpl: %d samples: %d\n",tsgprm.lagfr,tsgprm.smsep,tsgprm.txpl,tsgprm.samples);
-            fprintf(stdout,"WARNING: lagfr or smsep is zero, invalid timing sequence genrated from given baud/rsep/nrang/mpinc will confuse TSGMake and FitACF into segfaulting");
+            fprintf(stdout,"  WARNING: lagfr or smsep is zero, invalid timing sequence genrated from given baud/rsep/nrang/mpinc will confuse TSGMake and FitACF into segfaulting");
         }
 
         else {
-            fprintf(stdout,"The phase coded timing sequence looks good\n");
+            fprintf(stdout,"  The calculated timing sequence looks good\n");
         }
     } else {
         fprintf(stdout,"WARNING: nbaud needs to be  > 0\n");
@@ -651,63 +669,45 @@ int main(int argc,char *argv[]) {
         t0.tv_sec=t1.tv_sec;
         t0.tv_usec=t1.tv_usec;
       }
-      sprintf(logtxt,"Transmitting on: %d (Noise=%g)",tfreq,noise);
-      ErrLog(errlog.sock,progname,logtxt);
-    
-      nave=SiteIntegrate(lags);   
-      if (nave<0) {
-        sprintf(logtxt,"Integration error:%d",nave);
-        ErrLog(errlog.sock,progname,logtxt); 
-        continue;
+      /* Test arguments to see if frequency stepping was requested */
+      if (ai_frqsteps->ival[0] < 0) ai_frqsteps->ival[0]=0;
+      if (ai_frqstepsize->ival[0] < 0) ai_frqstepsize->ival[0]=0;
+      if (ai_frqstepsize->ival[0]) {
+        basefreq=tfreq;
+        sprintf(logtxt,"Setting up for frequency stepping. Start Frequency: %d (Noise=%g)",basefreq,noise);
+        ErrLog(errlog.sock,progname,logtxt);
+        /* Here we loop over requested frequency steps on the current beam */
+        for ( fstep=0;fstep < ai_frqsteps->ival[0]; fstep ++) {
+          tfreq=basefreq+fstep*ai_frqsteps->ival[0];
+          sprintf(logtxt,"Freq Step: %d  Transmitting on: %d",fstep,tfreq);
+          ErrLog(errlog.sock,progname,logtxt);
+          nave=SiteIntegrate(lags);   
+          /* If it was a bad integration, break out of the fstep for loop*/
+          if (nave<0) {
+            sprintf(logtxt,"Integration error:%d",nave);
+            ErrLog(errlog.sock,progname,logtxt); 
+            break;
+          }
+          sprintf(logtxt,"Number of sequences: %d",nave);
+          ErrLog(errlog.sock,progname,logtxt);
+        }
+        /* if its an integration error, jump back to beginning of the while loop, and repeat integration for current beam*/
+        if (nave<0) {
+            continue;
+        }
+      } else {
+        sprintf(logtxt,"Transmitting on: %d (Noise=%g)",tfreq,noise);
+        ErrLog(errlog.sock,progname,logtxt);
+        nave=SiteIntegrate(lags);   
+        if (nave<0) {
+          sprintf(logtxt,"Integration error:%d",nave);
+          ErrLog(errlog.sock,progname,logtxt); 
+          continue;
+        }
+        sprintf(logtxt,"Number of sequences: %d",nave);
+        ErrLog(errlog.sock,progname,logtxt);
       }
-      sprintf(logtxt,"Number of sequences: %d",nave);
-      ErrLog(errlog.sock,progname,logtxt);
-/* tim sequence not compatible with acf processing so lets just not worry about it here.
-      OpsBuildPrm(prm,ptab,lags);
-      
-      OpsBuildIQ(iq,&badtr);
-            
-      OpsBuildRaw(raw);
-       
-      FitACF(prm,raw,fblk,fit);
-      
-      msg.num=0;
-      msg.tsize=0;
-
-      tmpbuf=RadarParmFlatten(prm,&tmpsze);
-      RMsgSndAdd(&msg,tmpsze,tmpbuf,
-		PRM_TYPE,0); 
-
-      tmpbuf=IQFlatten(iq,prm->nave,&tmpsze);
-      RMsgSndAdd(&msg,tmpsze,tmpbuf,IQ_TYPE,0);
-
-      RMsgSndAdd(&msg,sizeof(unsigned int)*2*iq->tbadtr,
-                 (unsigned char *) badtr,BADTR_TYPE,0);
-		 
-      RMsgSndAdd(&msg,strlen(sharedmemory)+1,(unsigned char *) sharedmemory,
-		 IQS_TYPE,0);
-
-      tmpbuf=RawFlatten(raw,prm->nrang,prm->mplgs,&tmpsze);
-      RMsgSndAdd(&msg,tmpsze,tmpbuf,RAW_TYPE,0); 
- 
-      tmpbuf=FitFlatten(fit,prm->nrang,&tmpsze);
-      RMsgSndAdd(&msg,tmpsze,tmpbuf,FIT_TYPE,0); 
-
-        
-      RMsgSndAdd(&msg,strlen(progname)+1,(unsigned char *) progname,
-		NME_TYPE,0);   
-     
-
-     
-      for (n=0;n<tnum;n++) RMsgSndSend(task[n].sock,&msg); 
-
-      for (n=0;n<msg.num;n++) {
-        if (msg.data[n].type==PRM_TYPE) free(msg.ptr[n]);
-        if (msg.data[n].type==IQ_TYPE) free(msg.ptr[n]);
-        if (msg.data[n].type==RAW_TYPE) free(msg.ptr[n]);
-        if (msg.data[n].type==FIT_TYPE) free(msg.ptr[n]); 
-      }          
-*/
+      /* End of scan logic to setup for next beam */
       if (exitpoll !=0) break;
       scan=0;
       if (bmnum==ebm) break;
