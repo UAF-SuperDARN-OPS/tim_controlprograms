@@ -294,30 +294,33 @@ int main(int argc,char *argv[]) {
   } else {
     verstr = NULL;
   }
-  printf("Requested :: ststr: %s libstr: %s verstr: %s\n",ststr,libstr,verstr);
-/* This loads Radar Site information from hdw.dat files */
-  OpsStart(ststr);
+  fprintf(stdout,"Requested :: ststr: %s libstr: %s verstr: %s\n",ststr,libstr,verstr);
+  if (al_test->count == 0 ) {
+    /* This loads Radar Site information from hdw.dat files */
+    OpsStart(ststr);
 
-/* This loads Site library via dlopen and maps:
- * site library specific functions into Site name space
-*/
-  status=SiteBuild(libstr,verstr); /* second argument is version string */
-  if (status==-1) {
-    fprintf(stderr,"Could not load requested site library\n");
-    exit(1);
-  }
+    /* This loads Site library via dlopen and maps:
+     * site library specific functions into Site name space
+    */
+    status=SiteBuild(libstr,verstr); /* second argument is version string */
+    if (status==-1) {
+       fprintf(stderr,"Could not load requested site library\n");
+       exit(1);
+    }
  
-/* Run SiteStart library function to load Site specific default values for global variables
- * This should be run before all options are parsed and before any task sockets are opened
- * arguments: host ip address, 3-letter station string
-*/
+    /* Run SiteStart library function to load Site specific default values for global variables
+     * This should be run before all options are parsed and before any task sockets are opened
+     * arguments: host ip address, 3-letter station string
+    */
   
-  status=SiteStart(roshost,ststr);
-  if (status==-1) {
-    fprintf(stderr,"SiteStart failure\n");
-    exit(1);
+    status=SiteStart(roshost,ststr);
+    if (status==-1) {
+      fprintf(stderr,"SiteStart failure\n");
+      exit(1);
+    } else {
+      fprintf(stdout,"Test enabled, bypassing radar site functions\n");
+    }
   }
-
 /* load any provided argument values overriding default values provided by SiteStart */ 
   if (ai_xcf->count) xcnt = ai_xcf->ival[0];
   if (ai_mppul->count) mppul = ai_mppul->ival[0];
@@ -351,6 +354,7 @@ int main(int argc,char *argv[]) {
 
 /* Prep command string for tasks */ 
   strncpy(combf,progid,80);   
+
   OpsSetupCommand(argc,argv);
   OpsLogStart(errlog.sock,progname,argc,argv);  
   OpsSetupTask(tnum,task,errlog.sock,progname);

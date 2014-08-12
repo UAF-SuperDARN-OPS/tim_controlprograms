@@ -1,36 +1,3 @@
-Usage: timscan [--help] [--debug] [--test] [--di] [--fast] [--nowait] [--onesec] [--mppul=<int>] [--baud=<int>] [--tau=<int>] [--nrang=<int>] [--frang=<int>] [--frqstepsize=<int>] [--frqsteps=<int>] [--scansc=<int>] [--rsep=<int>] [--dt=<int>] [--nt=<int>] [--df=<int>] [--nf=<int>] [--fixfrq=<int>] [--xcf=<int>] [--ep=<int>] [--sp=<int>] [--bp=<int>] [--sb=<int>] [--eb=<int>] [-c <int>] [--ros=<string>] [--stid=<string>] [--lib=<string>] [--version=<string>] [--clrskip=<int>] [--clrscan] [--cpid=<int>]
-  --help                    Prints help infomation and then exits
-  --debug                   Enable debugging messages
-  --test                    Test-only, report parameter settings and exit without connecting to ros server
-  --di                      Flag this is discretionary time operation
-  --fast                    Flag this as fast 1-minute scan duration
-  --nowait                  Do not wait for minute scan boundary
-  --onesec                  Use one second integration times
-  --mppul=<int>             mppul to use for pulse table
-  --baud=<int>              Baud to use for phasecoded sequences
-  --tau=<int>               Lag spacing in usecs
-  --nrang=<int>             Number of range cells
-  --frang=<int>             Distance to first range cell in km
-  --frqstepsize=<int>       Frequency step size in KHz to use
-  --frqsteps=<int>          Number of frequency steps to use. Value of 0 disables frequency stepping
-  --scansc=<int>            Scan boundary in seconds
-  --rsep=<int>              Range cell extent in km
-  --dt=<int>                UTC Hour indicating start of day time operation
-  --nt=<int>                UTC Hour indicating start of night time operation
-  --df=<int>                Day time transmit frequency in KHz
-  --nf=<int>                Night time transmit frequency in KHz
-  --fixfrq=<int>            Fixes the transmit frequency of the radar to one frequency, in KHz
-  --xcf=<int>               Enable xcf, --xcf 1: for all sequences --xcf 2: for every other sequence, etc...
-  --ep=<int>                Local TCP port for errorlog process
-  --sp=<int>                Local TCP port for radarshall process
-  --bp=<int>                Local TCP port for start of support task proccesses
-  --sb=<int>                Limits the minimum beam to the given value.
-  --eb=<int>                Limits the maximum beam number to the given value.
-  -c, --cnum=<int>          Radar Channel number, minimum value 1
-  --ros=<string>            IP address of ROS server process
-  --stid=<string>           The station ID string. For example, use aze for azores east.
-  --lib=<string>            The site library string. For example, use ros for for common libsite.ros
-  --version=<string>        The site library version string. Defaults to: "1" 
-  --clrskip=<int>           Minimum number of seconds to skip between clear frequency search
-  --clrscan                 Force clear frequency search at start of scan
-  --cpid=<int>              Select control program ID number
+
+timscan --help to get a full listing of arguments
+timscan --test to test parameters
