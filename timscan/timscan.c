@@ -151,6 +151,7 @@ int main(int argc,char *argv[]) {
   struct arg_lit  *al_test       = arg_lit0(NULL, "test","Test-only, report parameter settings and exit without connecting to ros server");
   struct arg_lit  *al_discretion = arg_lit0(NULL, "di","Flag this is discretionary time operation"); 
   struct arg_lit  *al_fast       = arg_lit0(NULL, "fast","Flag this as fast 1-minute scan duration"); 
+  struct arg_lit  *al_noint       = arg_lit0(NULL, "noint","Flag: collect 1 sequence per integration period"); 
   struct arg_lit  *al_nowait     = arg_lit0(NULL, "nowait","Do not wait for minute scan boundary"); 
   struct arg_lit  *al_onesec     = arg_lit0(NULL, "onesec","Use one second integration times"); 
   struct arg_lit  *al_clrscan    = arg_lit0(NULL, "clrscan","Force clear frequency search at start of scan"); 
@@ -189,7 +190,7 @@ int main(int argc,char *argv[]) {
   struct arg_end  *ae_argend     = arg_end(ARG_MAXERRORS);
 
   /* create list of all arguement structs */
-  void* argtable[] = {al_help,al_debug,al_test,al_discretion, al_fast, al_nowait, al_onesec, \
+  void* argtable[] = {al_help,al_debug,al_test,al_discretion, al_fast, al_noint, al_nowait, al_onesec, \
                       ai_mppul,ai_baud, ai_tau, ai_nrang, ai_frang, ai_frqstepsize,ai_frqsteps,ai_scansc,ai_rsep, ai_dt, ai_nt, ai_df, ai_nf, ai_fixfrq, ai_xcf, ai_ep, ai_sp, ai_bp, ai_sb, ai_eb, ai_cnum, \
                       as_ros, as_ststr, as_libstr,as_verstr,ai_clrskip,al_clrscan,ai_cpid,ae_argend};
 
@@ -210,6 +211,7 @@ int main(int argc,char *argv[]) {
 /* Set default values for all the cmdline options */
   al_discretion->count = 0;
   al_fast->count = 0;
+  al_noint->count = 0;
   al_nowait->count = 0;
   al_onesec->count = 0;
   al_clrscan->count = 0;
@@ -380,9 +382,18 @@ int main(int argc,char *argv[]) {
     scnus=0;
     sprintf(modestr," (fast)");
     strncat(progname,modestr,strlen(modestr)+1);
+  } else if (al_noint->count) {
+    /* noint disables integration tim site library will intepret this and collect only one sequence per SiteIntegrate call*/
+    cp=10004;
+    intsc=0;
+    intus=0;
+    scnsc=60;
+    scnus=0;
+    sprintf(modestr," (no int)");
+    strncat(progname,modestr,strlen(modestr)+1);
   } else {
     cp=10007;
-    /* If fast option not selected use 2 minute scan boundaries */
+    /* If fast or noint option not selected use 2 minute scan boundaries */
     intsc=7;
     intus=0;
     scnsc=120;
