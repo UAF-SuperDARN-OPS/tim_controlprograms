@@ -887,8 +887,15 @@ int SiteTimIntegrate(int (*lags)[2]) {
 
     time_diff=(tick.tv_sec-tock.tv_sec);
     time_diff+=(tick.tv_usec-tock.tv_usec)/1E6;
-    if (time_diff > 0.0) {
-      break;
+    /* Tests to break out of Integration loop */
+    if (tock.tv_sec+tock.tv_usec==0) {
+      /*Integration not requested, break when nave > 0 */
+      if (nave > 0) break; 
+    } else {
+      /*Integration requested, break when elapsed time is greater than integration scan */
+      if (time_diff > 0.0) {
+        break;
+      }
     }
 
 
