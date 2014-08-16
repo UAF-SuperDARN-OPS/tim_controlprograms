@@ -1,4 +1,3 @@
-/* HOLY BEJESUS! */
 /* timescan.c
    ============
 */
