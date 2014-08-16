@@ -1,4 +1,4 @@
-/* timescan.c
+/* timscan.c
    ============
 */
 
