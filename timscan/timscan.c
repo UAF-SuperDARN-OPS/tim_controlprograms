@@ -1,3 +1,4 @@
+/* HOLY BEJESUS! */
 /* timescan.c
    ============
 */
@@ -169,6 +170,7 @@ int main(int argc,char *argv[]) {
   struct arg_int  *ai_fixfrq     = arg_int0(NULL, "fixfrq", NULL,"Fixes the transmit frequency of the radar to one frequency, in KHz"); /*OptionAdd( &opt, "fixfrq", 'i', &fixfrq); */
   struct arg_int  *ai_frqstepsize = arg_int0(NULL, "frqstepsize", NULL,"Frequency step size in KHz to use"); 
   struct arg_int  *ai_frqsteps   = arg_int0(NULL, "frqsteps", NULL,"Number of frequency steps to use. Value of 0 disables frequency stepping"); 
+  struct arg_int  *ai_frqmodulo   = arg_int0(NULL, "frqmodulo", NULL,"Period (in steps) of frequency sweep. Defaults to frqsteps"); 
   struct arg_int  *ai_scansc     = arg_int0(NULL, "scansc", NULL,"Scan boundary in seconds");
   struct arg_int  *ai_xcf        = arg_int0(NULL, "xcf", NULL,"Enable xcf, --xcf 1: for all sequences --xcf 2: for every other sequence, etc..."); /*OptionAdd( &opt, "xcf", 'i', &xcnt); */
   struct arg_int  *ai_ep         = arg_int0(NULL, "ep", NULL,"Local TCP port for errorlog process"); /*OptionAdd(&opt,"ep",'i',&errlog.port); */
@@ -191,8 +193,9 @@ int main(int argc,char *argv[]) {
 
   /* create list of all arguement structs */
   void* argtable[] = {al_help,al_debug,al_test,al_discretion, al_fast, al_noint, al_nowait, al_onesec, \
-                      ai_mppul,ai_baud, ai_tau, ai_nrang, ai_frang, ai_frqstepsize,ai_frqsteps,ai_scansc,ai_rsep, ai_dt, ai_nt, ai_df, ai_nf, ai_fixfrq, ai_xcf, ai_ep, ai_sp, ai_bp, ai_sb, ai_eb, ai_cnum, \
-                      as_ros, as_ststr, as_libstr,as_verstr,ai_clrskip,al_clrscan,ai_cpid,ae_argend};
+                      ai_mppul,ai_baud, ai_tau, ai_nrang, ai_frang, ai_frqstepsize,ai_frqsteps,ai_frqmodulo,\
+                      ai_scansc,ai_rsep, ai_dt, ai_nt, ai_df, ai_nf, ai_fixfrq, ai_xcf, ai_ep, ai_sp, ai_bp,\ 
+                      ai_sb, ai_eb, ai_cnum,as_ros, as_ststr, as_libstr,as_verstr,ai_clrskip,al_clrscan,ai_cpid,ae_argend};
 
 /* END of variable defines */
 
@@ -221,6 +224,7 @@ int main(int argc,char *argv[]) {
   ai_fixfrq->ival[0] = -1;
   ai_frqstepsize->ival[0] = 0;
   ai_frqsteps->ival[0] = 0;
+  ai_frqmodulo->ival[0] = 10; /* Should default to something > 0 */
   ai_mppul->ival[0] = mppul;
   ai_baud->ival[0] = nbaud;
   ai_tau->ival[0] = mpinc;
@@ -543,6 +547,7 @@ int main(int argc,char *argv[]) {
     }
     fprintf(stdout,"  frqstepsize :: %d kHz\n",ai_frqstepsize->ival[0]);
     fprintf(stdout,"  frqsteps :: %d\n",ai_frqsteps->ival[0]);
+    fprintf(stdout,"  frqmodulo :: %d\n",ai_frqmodulo->ival[0]);
     
     /* TODO: ADD PARAMETER CHECKING, SEE IF PCODE IS SANE AND WHATNOT */
    if(nbaud >= 1) {
@@ -701,7 +706,7 @@ int main(int argc,char *argv[]) {
         ErrLog(errlog.sock,progname,logtxt);
         /* Here we loop over requested frequency steps on the current beam */
         for ( fstep=0;fstep < ai_frqsteps->ival[0]; fstep ++) {
-          tfreq=basefreq+fstep*ai_frqsteps->ival[0];
+          tfreq = basefreq + (fstep % ai_frqmodulo->ival[0])*ai_frqstepsize->ival[0];
           sprintf(logtxt,"Freq Step: %d  Transmitting on: %d",fstep,tfreq);
           ErrLog(errlog.sock,progname,logtxt);
           nave=SiteIntegrate(lags);   
