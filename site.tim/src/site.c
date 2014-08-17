@@ -547,10 +547,16 @@ int SiteTimStartIntt(int sec,int usec) {
   }
 
   secs=sec+(double)usec/1E6;
-  if (gettimeofday(&tock,NULL)==-1) return -1;
-  tock.tv_sec+=floor(secs);
-  tock.tv_usec+=(secs-floor(secs))*1E6;
-
+  if(secs > 0 ) {
+    /* set tock to expected end of integration */
+    if (gettimeofday(&tock,NULL)==-1) return -1;
+    tock.tv_sec+=floor(secs);
+    tock.tv_usec+=(secs-floor(secs))*1E6;
+  } else {
+    /* set tock to zero, indicating no integration requested */
+    tock.tv_sec=0;
+    tock.tv_usec=0;
+  }
   if (debug) {
     fprintf(stderr,"SiteTimStartInt: end\n");
   }
