@@ -32,7 +32,7 @@
 #include <sys/time.h>
 #include <argtable2.h>
 #include <zlib.h>
-
+#include <math.h>
 /* Includes provided by the RST */ 
 #include "rtypes.h"
 #include "rtime.h"
@@ -124,6 +124,7 @@ int main(int argc,char *argv[]) {
 /* Integration period variables */
   int scnsc=120;
   int scnus=0;
+  int32_t scnoffsc=0;
   int total_scan_usecs=0;
   int total_integration_usecs=0;
 
@@ -170,7 +171,9 @@ int main(int argc,char *argv[]) {
   struct arg_int  *ai_frqstepsize = arg_int0(NULL, "frqstepsize", NULL,"Frequency step size in KHz to use"); 
   struct arg_int  *ai_frqsteps   = arg_int0(NULL, "frqsteps", NULL,"Number of frequency steps to use. Value of 0 disables frequency stepping"); 
   struct arg_int  *ai_frqmodulo   = arg_int0(NULL, "frqmodulo", NULL,"Period (in steps) of frequency sweep. Defaults to frqsteps"); 
-  struct arg_int  *ai_scansc     = arg_int0(NULL, "scansc", NULL,"Scan boundary in seconds");
+  struct arg_int  *ai_scanoffset     = arg_int0(NULL, "scanoffset", NULL,"Scan start offset in seconds");
+  struct arg_dbl  *adbl_scansc   = arg_dbl0(NULL, "scansc", NULL,"Scan boundary in seconds (double)");
+  struct arg_dbl  *adbl_intsc    = arg_dbl0(NULL, "intsc", NULL,"Integration in seconds (double)");
   struct arg_int  *ai_xcf        = arg_int0(NULL, "xcf", NULL,"Enable xcf, --xcf 1: for all sequences --xcf 2: for every other sequence, etc..."); /*OptionAdd( &opt, "xcf", 'i', &xcnt); */
   struct arg_int  *ai_ep         = arg_int0(NULL, "ep", NULL,"Local TCP port for errorlog process"); /*OptionAdd(&opt,"ep",'i',&errlog.port); */
   struct arg_int  *ai_sp         = arg_int0(NULL, "sp", NULL,"Local TCP port for radarshall process"); /*OptionAdd(&opt,"sp",'i',&shell.port); */
@@ -193,7 +196,7 @@ int main(int argc,char *argv[]) {
   /* create list of all arguement structs */
   void* argtable[] = {al_help,al_debug,al_test,al_discretion, al_fast, al_noint, al_nowait, al_onesec, \
                       ai_mppul,ai_baud, ai_tau, ai_nrang, ai_frang, ai_frqstepsize,ai_frqsteps,ai_frqmodulo,\
-                      ai_scansc,ai_rsep, ai_dt, ai_nt, ai_df, ai_nf, ai_fixfrq, ai_xcf, ai_ep, ai_sp, ai_bp,\ 
+                      adbl_intsc,adbl_scansc,ai_scanoffset,ai_rsep, ai_dt, ai_nt, ai_df, ai_nf, ai_fixfrq, ai_xcf, ai_ep, ai_sp, ai_bp,\
                       ai_sb, ai_eb, ai_cnum,as_ros, as_ststr, as_libstr,as_verstr,ai_clrskip,al_clrscan,ai_cpid,ae_argend};
 
 /* END of variable defines */
@@ -219,7 +222,9 @@ int main(int argc,char *argv[]) {
   al_clrscan->count = 0;
   al_debug->count = 0;
   ai_bp->ival[0] = 44100;
-  ai_scansc->ival[0] = 0;
+  ai_scanoffset->ival[0] = 0;
+  adbl_scansc->dval[0] = 0;
+  adbl_intsc->dval[0] = 0.;
   ai_fixfrq->ival[0] = -1;
   ai_frqstepsize->ival[0] = 0;
   ai_frqsteps->ival[0] = 0;
@@ -513,10 +518,17 @@ int main(int argc,char *argv[]) {
      exitpoll=1;
      SiteExit(0);
   }
-  /* Let's apply the scansc argument value if it was requested */
-  if(ai_scansc->count > 0 ) {
-    scnsc=ai_scansc->ival[0];
-    scnus=0;
+  /* Let's apply the intsc and scansc argument value if it was requested */
+  if(adbl_intsc->count > 0 ) {
+    intsc=floor(adbl_intsc->dval[0]);
+    intus=(adbl_intsc->dval[0]-intsc)*1E6;
+  }
+  if(adbl_scansc->count > 0 ) {
+    scnsc=floor(adbl_scansc->dval[0]);
+    scnus=(adbl_scansc->dval[0]-scnsc)*1E6;
+  }
+  if(ai_scanoffset->count > 0 ) {
+    scnoffsc=ai_scanoffset->ival[0];
   }
 
   if(al_test->count > 0) {
@@ -616,7 +628,8 @@ int main(int argc,char *argv[]) {
 
   printf("Entering Scan loop Station ID: %s  %d\n",ststr,stid);
   do {
-    if (SiteStartScan() !=0) continue;
+    printf("Start Scan with scanoffset: %d (seconds) relative to minute boundary\n",scnoffsc);
+    if (SiteStartScan(scnoffsc) !=0) continue;
     if (OpsReOpen(2,0,0) !=0) {
       ErrLog(errlog.sock,progname,"Opening new files.");
       for (n=0;n<tnum;n++) {

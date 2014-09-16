@@ -489,11 +489,42 @@ int SiteTimSetupRadar() {
 }
 
  
-int SiteTimStartScan() {
+int SiteTimStartScan(int32_t wait_seconds) {
   struct ROSMsg smsg,rmsg;
+  struct timeval tick;
+  int32_t count=0;
+  double  minute_seconds;
+  if (debug) {
+    fprintf(stderr,"SiteTimStartScan: start\n");
+  }
+  gettimeofday(&tick,NULL);
+  while(count < wait_seconds) {
+    SiteTimExit(0);
+    gettimeofday(&tick,NULL);
+    minute_seconds=tick.tv_sec % 60;
+    if (minute_seconds >= wait_seconds) {
+      break;
+    }
+    if (debug) {
+      fprintf(stderr,"SiteTimStartScan: Ping %d\n",count);
+    }
+    smsg.type=PING;
+    TCPIPMsgSend(sock, &smsg, sizeof(struct ROSMsg));
+    TCPIPMsgRecv(sock, &rmsg, sizeof(struct ROSMsg));
+    count++; 
+    sleep(1);
+    gettimeofday(&tick,NULL);
+    minute_seconds=tick.tv_sec % 60;
+    if (minute_seconds >= wait_seconds) {
+      break;
+    }
+  } 
   smsg.type=SET_ACTIVE;
   TCPIPMsgSend(sock, &smsg, sizeof(struct ROSMsg));
   TCPIPMsgRecv(sock, &rmsg, sizeof(struct ROSMsg));
+  if (debug) {
+    fprintf(stderr,"SiteTimStartScan: end\n");
+  }
 
   return 0;
 }
@@ -1379,6 +1410,9 @@ int SiteTimEndScan(int bsc,int bus) {
   int count=0;
   SiteTimExit(0);
   bnd=bsc+bus/USEC;
+  if (debug) {
+    fprintf(stderr,"SiteTimEndScan: start\n");
+  }
 
   if (gettimeofday(&tock,NULL)==-1) return -1;
 
@@ -1393,6 +1427,7 @@ int SiteTimEndScan(int bsc,int bus) {
 
   gettimeofday(&tick,NULL);
   while (1) {
+    SiteTimExit(0);
     if (tick.tv_sec>tock.tv_sec) break;
     if ((tick.tv_sec==tock.tv_sec) && (tick.tv_usec>tock.tv_usec)) break;
     smsg.type=PING;
@@ -1416,6 +1451,9 @@ int SiteTimEndScan(int bsc,int bus) {
   TCPIPMsgSend(sock, &smsg, sizeof(struct ROSMsg));
   TCPIPMsgRecv(sock, &rmsg, sizeof(struct ROSMsg));
 */
+  if (debug) {
+    fprintf(stderr,"SiteTimEndScan: end\n");
+  }
   return 0;
 }
 
