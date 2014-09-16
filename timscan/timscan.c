@@ -86,7 +86,7 @@ int main(int argc,char *argv[]) {
 
   /* Number of active aux tasks */
   int tnum=0; /* We aren't going to be sending any data to the aux task processes */      
-
+  
   /* Aux task array for normal SuperDARN */
   struct TCPIPMsgHost task[4]={
     {"127.0.0.1",1,-1}, /* iqwrite */
@@ -121,6 +121,11 @@ int main(int argc,char *argv[]) {
     { 0, 1},		/*  1 */
     {47,47}};		/* alternate lag-0  */
 
+/* optional freq, separate from tfreq */
+
+  int32_t rfreq=-1;
+  int32_t expected_tfreq=0;
+
 /* Integration period variables */
   int scnsc=120;
   int scnus=0;
@@ -152,8 +157,9 @@ int main(int argc,char *argv[]) {
   struct arg_lit  *al_test       = arg_lit0(NULL, "test","Test-only, report parameter settings and exit without connecting to ros server");
   struct arg_lit  *al_discretion = arg_lit0(NULL, "di","Flag this is discretionary time operation"); 
   struct arg_lit  *al_fast       = arg_lit0(NULL, "fast","Flag this as fast 1-minute scan duration"); 
-  struct arg_lit  *al_noint       = arg_lit0(NULL, "noint","Flag: collect 1 sequence per integration period"); 
+  struct arg_lit  *al_noint      = arg_lit0(NULL, "noint","Flag: collect 1 sequence per integration period"); 
   struct arg_lit  *al_nowait     = arg_lit0(NULL, "nowait","Do not wait for minute scan boundary"); 
+  struct arg_lit  *al_notransmit = arg_lit0(NULL, "notransmit","Set transmit frequency to 0, but recv as per normal"); 
   struct arg_lit  *al_onesec     = arg_lit0(NULL, "onesec","Use one second integration times"); 
   struct arg_lit  *al_clrscan    = arg_lit0(NULL, "clrscan","Force clear frequency search at start of scan"); 
   /* Now lets define the integer valued arguments */
@@ -194,7 +200,7 @@ int main(int argc,char *argv[]) {
   struct arg_end  *ae_argend     = arg_end(ARG_MAXERRORS);
 
   /* create list of all arguement structs */
-  void* argtable[] = {al_help,al_debug,al_test,al_discretion, al_fast, al_noint, al_nowait, al_onesec, \
+  void* argtable[] = {al_help,al_debug,al_test,al_discretion, al_fast, al_noint, al_nowait, al_notransmit,al_onesec, \
                       ai_mppul,ai_baud, ai_tau, ai_nrang, ai_frang, ai_frqstepsize,ai_frqsteps,ai_frqmodulo,\
                       adbl_intsc,adbl_scansc,ai_scanoffset,ai_rsep, ai_dt, ai_nt, ai_df, ai_nf, ai_fixfrq, ai_xcf, ai_ep, ai_sp, ai_bp,\
                       ai_sb, ai_eb, ai_cnum,as_ros, as_ststr, as_libstr,as_verstr,ai_clrskip,al_clrscan,ai_cpid,ae_argend};
@@ -218,6 +224,7 @@ int main(int argc,char *argv[]) {
   al_fast->count = 0;
   al_noint->count = 0;
   al_nowait->count = 0;
+  al_notransmit->count = 0;
   al_onesec->count = 0;
   al_clrscan->count = 0;
   al_debug->count = 0;
@@ -738,7 +745,17 @@ int main(int argc,char *argv[]) {
       } else {
         sprintf(logtxt,"Transmitting on: %d (Noise=%g)",tfreq,noise);
         ErrLog(errlog.sock,progname,logtxt);
-        nave=SiteIntegrate(lags);   
+        if (al_notransmit->count==0) {
+          rfreq=-1;
+          nave=SiteIntegrate(lags,rfreq);   
+        } else {
+          expected_tfreq=tfreq;
+          rfreq=expected_tfreq;
+          tfreq=0;
+          nave=SiteIntegrate(lags,rfreq);   
+          tfreq=expected_tfreq;
+
+        }
         if (nave<0) {
           sprintf(logtxt,"Integration error:%d",nave);
           ErrLog(errlog.sock,progname,logtxt); 

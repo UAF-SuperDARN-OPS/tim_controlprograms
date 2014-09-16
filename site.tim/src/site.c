@@ -731,7 +731,7 @@ int SiteTimTimeSeq(int *ptab) {
   return index;
 }
 
-int SiteTimIntegrate(int (*lags)[2]) {
+int SiteTimIntegrate(int (*lags)[2], int32_t rfreq) {
 
   int *lagtable[2]={NULL,NULL};
   int lagsum[LAG_SIZE];
@@ -938,7 +938,11 @@ int SiteTimIntegrate(int (*lags)[2]) {
 
     rprm.tbeam=bmnum;   
     rprm.tfreq=tfreq;   
-    rprm.rfreq=tfreq;   
+    if (rfreq < 0) { 
+      rprm.rfreq=tfreq;   
+    } else {
+      rprm.rfreq=rfreq;   
+    }
     rprm.trise=5000;   
     rprm.baseband_samplerate=((double)nbaud/(double)txpl)*1E6; 
     rprm.filter_bandwidth=rprm.baseband_samplerate; 
@@ -948,6 +952,9 @@ int SiteTimIntegrate(int (*lags)[2]) {
     rprm.buffer_index=0;  
 
     usecs=(int)(rprm.number_of_samples/rprm.baseband_samplerate*1E6);
+    if (debug) {
+      fprintf(stderr,"%s SiteIntegrate: rfreq %d tfreq %d\n",station,rprm.rfreq,rprm.tfreq);
+    }
 
     smsg.type=SET_PARAMETERS;
     TCPIPMsgSend(sock,&smsg,sizeof(struct ROSMsg));
