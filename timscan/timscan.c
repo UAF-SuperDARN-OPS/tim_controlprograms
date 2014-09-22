@@ -726,15 +726,17 @@ int main(int argc,char *argv[]) {
         /* Here we loop over requested frequency steps on the current beam */
         for ( fstep=0;fstep < ai_frqsteps->ival[0]; fstep ++) {
           tfreq = basefreq + (fstep % ai_frqmodulo->ival[0])*ai_frqstepsize->ival[0];
-          sprintf(logtxt,"Freq Step: %d  Transmitting on: %d",fstep,tfreq);
-          ErrLog(errlog.sock,progname,logtxt);
           if (al_notransmit->count==0) {
             rfreq=-1;
+            sprintf(logtxt,"Freq Step: %d  Transmitting on: %d Receive on: %d",fstep,tfreq,rfreq);
+            ErrLog(errlog.sock,progname,logtxt);
             nave=SiteIntegrate(lags,rfreq);   
           } else {
             expected_tfreq=tfreq;
             rfreq=expected_tfreq;
             tfreq=0;
+            sprintf(logtxt,"Freq Step: %d  Transmitting on: %d Receive on: %d",fstep,tfreq,rfreq);
+            ErrLog(errlog.sock,progname,logtxt);
             nave=SiteIntegrate(lags,rfreq);   
             tfreq=expected_tfreq;
           }
