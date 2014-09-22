@@ -728,7 +728,16 @@ int main(int argc,char *argv[]) {
           tfreq = basefreq + (fstep % ai_frqmodulo->ival[0])*ai_frqstepsize->ival[0];
           sprintf(logtxt,"Freq Step: %d  Transmitting on: %d",fstep,tfreq);
           ErrLog(errlog.sock,progname,logtxt);
-          nave=SiteIntegrate(lags);   
+          if (al_notransmit->count==0) {
+            rfreq=-1;
+            nave=SiteIntegrate(lags,rfreq);   
+          } else {
+            expected_tfreq=tfreq;
+            rfreq=expected_tfreq;
+            tfreq=0;
+            nave=SiteIntegrate(lags,rfreq);   
+            tfreq=expected_tfreq;
+          }
           /* If it was a bad integration, break out of the fstep for loop*/
           if (nave<0) {
             sprintf(logtxt,"Integration error:%d",nave);
