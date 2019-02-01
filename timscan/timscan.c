@@ -211,12 +211,12 @@ int main(int argc,char *argv[]) {
   cp=10000;
   intsc=7;
   intus=0;
-  mppul=20;
+  mppul=48;
   mplgs=2;
   mpinc=5000;
   nrang=200;
   rsep=15;
-  txpl=300;
+  txpl=500;
   nbaud=5;
 
 /* Set default values for all the cmdline options */
@@ -232,7 +232,7 @@ int main(int argc,char *argv[]) {
   ai_scanoffset->ival[0] = 0;
   adbl_scansc->dval[0] = 0;
   adbl_intsc->dval[0] = 0.;
-  ai_fixfrq->ival[0] = -1;
+  ai_fixfrq->ival[0] = 10500;
   ai_frqstepsize->ival[0] = 0;
   ai_frqsteps->ival[0] = 0;
   ai_frqmodulo->ival[0] = 10; /* Should default to something > 0 */
@@ -259,7 +259,7 @@ int main(int argc,char *argv[]) {
   nerrors = arg_parse(argc,argv,argtable);
 
   if (nerrors > 0) {
-    arg_print_errors(stdout,ae_argend,"uafscan");
+    arg_print_errors(stdout,ae_argend,"timscan");
   }
   
   if (argc == 1) {
