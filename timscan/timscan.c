@@ -119,9 +119,14 @@ int main(int argc,char *argv[]) {
   int current_beam, iBeam;
 
   /* time sync of integration periods/ beams */
-  int sync_scan;
+  int sync_scan = 0;
   int time_now,  time_to_wait; /* times in ms for period synchronization */
   int *scan_times;  /* scan times in ms */
+
+  scan_times = ( int [38])    {
+       0,   3,   6,   9,  12,  15,  18,  21,  24,  27,  30,  33,  36,  39,  42,
+      45,  48,  51,  54,  60,  63,  66,  69,  72,  75,  78,  81,  84,  87,  90,
+      93, 96, 99, 102, 105, 108, 111, 114 };
 
 /* Pulse sequence Table */
   int ptab[48] = {
