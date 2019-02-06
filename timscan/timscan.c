@@ -361,7 +361,10 @@ int main(int argc,char *argv[]) {
   if (ai_eb->count) ebm = ai_eb->ival[0];
   if (ai_bp->count) baseport=ai_bp->ival[0];
 
- 
+ for (iBeam =0; iBeam < nBeams_per_scan; iBeam++){
+         scan_beam_number_list[iBeam] = current_beam;
+         current_beam += backward ? -1:1;
+ }
 
 
   /* Print out details of beams */ 
