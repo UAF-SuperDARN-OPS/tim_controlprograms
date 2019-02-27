@@ -5,11 +5,11 @@
 
 /*
  LICENSE AND DISCLAIMER
- 
+
  Copyright (c) 2012 The Johns Hopkins University/Applied Physics Laboratory
- 
+
  This file is part of the Radar Software Toolkit (RST).
- 
+
  RST is free software: you can redistribute it and/or modify
  it under the terms of the GNU Lesser General Public License as published by
  the Free Software Foundation, either version 3 of the License, or
@@ -19,13 +19,12 @@
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  GNU Lesser General Public License for more details.
- 
+
  You should have received a copy of the GNU Lesser General Public License
  along with RST.  If not, see <http://www.gnu.org/licenses/>.
- 
- 
-  
+
 */
+
 /* Includes provided by the OS environment */
 #include <stdlib.h>
 #include <stdio.h>
@@ -35,7 +34,7 @@
 #include <zlib.h>
 #include <math.h>
 
-/* Includes provided by the RST */ 
+/* Includes provided by the RST */
 #include "rtypes.h"
 #include "rtime.h"
 #include "dmap.h"
@@ -60,7 +59,7 @@
 #include "sitebuild.h"
 
 /* sorry, included for checking sanity checking pcode sequences with --test (JTK)*/
-#include "tsg.h" 
+#include "tsg.h"
 #include "maketsg.h"
 
 /* Argtable define for argument error parsing */
@@ -92,7 +91,7 @@ int main(int argc,char *argv[]) {
   size_t tmpsze;
 
   /* Number of active aux tasks */
-  int tnum=0;      
+  int tnum=0;
   struct TCPIPMsgHost task[4]={
     {"127.0.0.1",1,-1}, /* iqwrite */
     {"127.0.0.1",2,-1}, /* rawacfwrite */
@@ -115,7 +114,7 @@ int main(int argc,char *argv[]) {
   int32_t scan_clrfreq_bandwidth_list[MAX_INTEGRATIONS_PER_SCAN];
   int32_t scan_clrfreq_fstart_list[MAX_INTEGRATIONS_PER_SCAN];
   int32_t scan_beam_number_list[MAX_INTEGRATIONS_PER_SCAN];
-  int32_t nBeams_per_scan = 0;
+  int32_t nBeams_per_scan = 16;
   int current_beam, iBeam;
 
   /* time sync of integration periods/ beams */
@@ -123,28 +122,31 @@ int main(int argc,char *argv[]) {
   int time_now,  time_to_wait; /* times in ms for period synchronization */
   int *scan_times;  /* scan times in ms */
 
-  scan_times = ( int [38])    {
+/*  scan_times = ( int [38])    {
        0,   3,   6,   9,  12,  15,  18,  21,  24,  27,  30,  33,  36,  39,  42,
       45,  48,  51,  54,  60,  63,  66,  69,  72,  75,  78,  81,  84,  87,  90,
-      93, 96, 99, 102, 105, 108, 111, 114 };
+      93,  96,  99, 102, 105, 108, 111, 114 };
+*/
 
 /* Pulse sequence Table */
-  int ptab[48] = {
+  int ptab[33] = {
                   0,1,2,3,4,5,6,7,8,9,
                   10,11,12,13,14,15,16,17,18,19,
                   20,21,22,23,24,25,26,27,28,29,
-                  30,31,32,33,34,35,36,37,38,39,
-                  40,41,42,43,44,45,46,47 
+                  30,31,32
                 };
+
+/*  int ptab[4] = { 0, 1, 2, 3};
+*/
 
 /* Lag sequence Table */
   int lags[LAG_SIZE][2] = {
     { 0, 0},		/*  0 */
-    { 1, 1},		/*  1 */
-    {47,47}};		/* alternate lag-0  */
+    { 0, 1},		/*  1 */
+    { 9, 9}};		/* alternate lag-0  */
 
 /* Integration period variables */
-  int scnsc=120;
+  int scnsc=180;
   int scnus=0;
   int total_scan_usecs=0;
   int total_integration_usecs=0;
@@ -215,10 +217,10 @@ int main(int argc,char *argv[]) {
   cp     = 10000;
   intsc  = 7;
   intus  = 0;
-  mppul  = 48;
+  mppul  = 33;
   mplgs  = 2;
-  mpinc  = 5000;
-  nrang  = 200;
+  mpinc  = 20000;
+  nrang  = 100;
   rsep   = 15;
   txpl   = 500;
   nbaud  = 5;
@@ -226,7 +228,7 @@ int main(int argc,char *argv[]) {
 /* Set default values for all the cmdline options */
   al_discretion->count = 0;
   al_fast->count = 0;
-  al_nowait->count = 0;
+  al_nowait->count = 1;
   al_onesec->count = 0;
   al_clrscan->count = 0;
   al_debug->count = 0;
@@ -367,7 +369,7 @@ int main(int argc,char *argv[]) {
  }
 
 
-  /* Print out details of beams */ 
+ /* Print out details of beams */ 
   fprintf(stderr, "Sequence details: \n");
   for (iBeam =0; iBeam < nBeams_per_scan; iBeam++){
     fprintf(stderr, "  sequence %2d: beam: %2d, \n",iBeam, scan_beam_number_list[iBeam] );
@@ -404,8 +406,8 @@ int main(int argc,char *argv[]) {
   gettimeofday(&t1,NULL);
   gettimeofday(&t0,NULL);
   
-
-  if(nBeams_per_scan > 16) {  /* if number of beams in scan greater than legacy 16, recalculate beam dwell time to avoid over running scan boundary if scan boundary wait is active. */ 
+ /* if number of beams in scan greater than legacy 16, recalculate beam dwell time to avoid over running scan boundary if scan boundary wait is active. */
+  if(nBeams_per_scan > 16) {
       if (al_nowait->count==0 && al_onesec->count==0) {
         total_scan_usecs = (scnsc-3)*1E6+scnus;
         total_integration_usecs = total_scan_usecs/nBeams_per_scan;
@@ -521,7 +523,7 @@ int main(int argc,char *argv[]) {
         tsgprm.mpinc   = mpinc;
         tsgprm.mlag    = 0;
         tsgprm.nbaud   = nbaud;
-        tsgprm.stdelay = 18 + 2;
+        tsgprm.stdelay = 0;
         tsgprm.gort    = 1;
         tsgprm.rtoxmin = 0;
 
@@ -531,6 +533,7 @@ int main(int argc,char *argv[]) {
         for (i=0;i<tsgprm.mppul;i++) 
            tsgprm.pat[i]=ptab[i];
 
+        printf("*** Starting TSGMake ***\n");
         tsgbuf=TSGMake(&tsgprm,&flag);
         fprintf(stdout,"Sequence Parameters::\n");
         fprintf(stdout,"  lagfr: %d smsep: %d  txpl: %d\n",tsgprm.lagfr,tsgprm.smsep,tsgprm.txpl);
